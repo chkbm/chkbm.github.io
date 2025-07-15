@@ -13,7 +13,7 @@
 - Links
 
 # Education
-- Some University
+- Miami University (OH)
 
 
 # Work History
