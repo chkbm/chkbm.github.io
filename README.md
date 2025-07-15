@@ -10,7 +10,7 @@
 
 ## Project 2
 - Description
-- Links
+- **Links** [View Project]()
 
 # Education
 - Miami University (OH)
