@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA Player Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .controls-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .player-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .player-input {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .player-input label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .player-input select {
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .player-input select:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .metric-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 15px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .comparison-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+        }
+
+        .risk-indicator {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .risk-low {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .risk-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .risk-high {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .player-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .player-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .player-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>🏀 NBA Player Analytics Dashboard</h1>
+            <p>Compare player performance, analyze market volatility, and assess injury risks</p>
+        </div>
+
+        <div class="controls-section">
+            <div class="player-selector">
+                <div class="player-input">
+                    <label for="player1">Player 1</label>
+                    <select id="player1">
+                        <option value="">Select a player...</option>
+                    </select>
+                </div>
+                <div class="player-input">
+                    <label for="player2">Player 2</label>
+                    <select id="player2">
+                        <option value="">Select a player...</option>
+                    </select>
+                </div>
+                <div class="player-input">
+                    <label for="timeframe">Analysis Timeframe</label>
+                    <select id="timeframe">
+                        <option value="current">Current Season</option>
+                        <option value="last3">Last 3 Seasons</option>
+                        <option value="career">Career Average</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <h3><div class="metric-icon"></div>Performance Metrics</h3>
+                <div class="chart-container">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <h3><div class="metric-icon"></div>Market Volatility</h3>
+                <div class="chart-container">
+                    <canvas id="volatilityChart"></canvas>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <h3><div class="metric-icon"></div>Age vs Performance</h3>
+                <div class="chart-container">
+                    <canvas id="agePerformanceChart"></canvas>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <h3><div class="metric-icon"></div>Injury Risk Analysis</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">Games Missed (Season)</div>
+                        <div class="stat-value" id="gamesMissed">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Injury Frequency</div>
+                        <div class="stat-value" id="injuryFreq">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Recovery Time Avg</div>
+                        <div class="stat-value" id="recoveryTime">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Risk Level</div>
+                        <div class="stat-value" id="riskLevel">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="comparison-section">
+            <h2>Player Comparison</h2>
+            <div class="comparison-grid">
+                <div id="player1Card" class="player-card" style="display: none;">
+                    <div class="player-name" id="player1Name">Player 1</div>
+                    <div class="player-info" id="player1Info"></div>
+                    <div class="stats-grid" id="player1Stats"></div>
+                </div>
+                <div id="player2Card" class="player-card" style="display: none;">
+                    <div class="player-name" id="player2Name">Player 2</div>
+                    <div class="player-info" id="player2Info"></div>
+                    <div class="stats-grid" id="player2Stats"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample NBA player data with realistic stats
+        const nbaPlayers = {
+            'lebron-james': {
+                name: 'LeBron James',
+                age: 39,
+                team: 'LAL',
+                position: 'SF',
+                stats: {
+                    ppg: 25.3,
+                    rpg: 7.3,
+                    apg: 8.3,
+                    fg_pct: 0.540,
+                    games_played: 71
+                },
+                marketValue: 100,
+                volatility: 15,
+                injuryHistory: {
+                    gamesMissed: 11,
+                    injuryFreq: 'Low',
+                    recoveryTime: '12 days',
+                    riskLevel: 'Medium'
+                },
+                timeline: [95, 98, 102, 100, 98, 100, 97, 95]
+            },
+            'stephen-curry': {
+                name: 'Stephen Curry',
+                age: 36,
+                team: 'GSW',
+                position: 'PG',
+                stats: {
+                    ppg: 26.4,
+                    rpg: 4.5,
+                    apg: 5.1,
+                    fg_pct: 0.427,
+                    games_played: 74
+                },
+                marketValue: 95,
+                volatility: 20,
+                injuryHistory: {
+                    gamesMissed: 8,
+                    injuryFreq: 'Low',
+                    recoveryTime: '8 days',
+                    riskLevel: 'Low'
+                },
+                timeline: [100, 95, 98, 102, 105, 95, 98, 97]
+            },
+            'giannis-antetokounmpo': {
+                name: 'Giannis Antetokounmpo',
+                age: 29,
+                team: 'MIL',
+                position: 'PF',
+                stats: {
+                    ppg: 30.4,
+                    rpg: 11.5,
+                    apg: 6.5,
+                    fg_pct: 0.611,
+                    games_played: 73
+                },
+                marketValue: 105,
+                volatility: 12,
+                injuryHistory: {
+                    gamesMissed: 9,
+                    injuryFreq: 'Low',
+                    recoveryTime: '10 days',
+                    riskLevel: 'Low'
+                },
+                timeline: [90, 95, 100, 105, 108, 110, 107, 105]
+            },
+            'luka-doncic': {
+                name: 'Luka Dončić',
+                age: 25,
+                team: 'DAL',
+                position: 'PG',
+                stats: {
+                    ppg: 32.4,
+                    rpg: 9.1,
+                    apg: 8.6,
+                    fg_pct: 0.487,
+                    games_played: 70
+                },
+                marketValue: 110,
+                volatility: 18,
+                injuryHistory: {
+                    gamesMissed: 12,
+                    injuryFreq: 'Medium',
+                    recoveryTime: '15 days',
+                    riskLevel: 'Medium'
+                },
+                timeline: [80, 90, 95, 105, 110, 115, 112, 110]
+            },
+            'kevin-durant': {
+                name: 'Kevin Durant',
+                age: 35,
+                team: 'PHX',
+                position: 'SF',
+                stats: {
+                    ppg: 27.1,
+                    rpg: 6.6,
+                    apg: 5.0,
+                    fg_pct: 0.523,
+                    games_played: 75
+                },
+                marketValue: 90,
+                volatility: 25,
+                injuryHistory: {
+                    gamesMissed: 7,
+                    injuryFreq: 'Low',
+                    recoveryTime: '9 days',
+                    riskLevel: 'Medium'
+                },
+                timeline: [110, 105, 95, 85, 90, 88, 90, 92]
+            },
+            'jayson-tatum': {
+                name: 'Jayson Tatum',
+                age: 26,
+                team: 'BOS',
+                position: 'SF',
+                stats: {
+                    ppg: 26.9,
+                    rpg: 8.1,
+                    apg: 4.9,
+                    fg_pct: 0.473,
+                    games_played: 74
+                },
+                marketValue: 100,
+                volatility: 16,
+                injuryHistory: {
+                    gamesMissed: 8,
+                    injuryFreq: 'Low',
+                    recoveryTime: '11 days',
+                    riskLevel: 'Low'
+                },
+                timeline: [70, 80, 90, 95, 100, 105, 102, 100]
+            }
+        };
+
+        // Initialize charts
+        let performanceChart, volatilityChart, agePerformanceChart;
+
+        // Populate player dropdowns
+        function populatePlayerDropdowns() {
+            const player1Select = document.getElementById('player1');
+            const player2Select = document.getElementById('player2');
+            
+            Object.keys(nbaPlayers).forEach(playerId => {
+                const player = nbaPlayers[playerId];
+                const option1 = new Option(player.name, playerId);
+                const option2 = new Option(player.name, playerId);
+                player1Select.add(option1);
+                player2Select.add(option2);
+            });
+        }
+
+        // Create performance comparison chart
+        function createPerformanceChart(player1Id, player2Id) {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            
+            if (performanceChart) {
+                performanceChart.destroy();
+            }
+
+            const datasets = [];
+            
+            if (player1Id && nbaPlayers[player1Id]) {
+                const p1 = nbaPlayers[player1Id];
+                datasets.push({
+                    label: p1.name,
+                    data: [p1.stats.ppg, p1.stats.rpg, p1.stats.apg, p1.stats.fg_pct * 100],
+                    backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 2
+                });
+            }
+            
+            if (player2Id && nbaPlayers[player2Id]) {
+                const p2 = nbaPlayers[player2Id];
+                datasets.push({
+                    label: p2.name,
+                    data: [p2.stats.ppg, p2.stats.rpg, p2.stats.apg, p2.stats.fg_pct * 100],
+                    backgroundColor: 'rgba(118, 75, 162, 0.6)',
+                    borderColor: 'rgba(118, 75, 162, 1)',
+                    borderWidth: 2
+                });
+            }
+
+            performanceChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Points', 'Rebounds', 'Assists', 'FG%'],
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 40
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create market volatility chart
+        function createVolatilityChart(player1Id, player2Id) {
+            const ctx = document.getElementById('volatilityChart').getContext('2d');
+            
+            if (volatilityChart) {
+                volatilityChart.destroy();
+            }
+
+            const datasets = [];
+            
+            if (player1Id && nbaPlayers[player1Id]) {
+                const p1 = nbaPlayers[player1Id];
+                datasets.push({
+                    label: p1.name,
+                    data: p1.timeline,
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                });
+            }
+            
+            if (player2Id && nbaPlayers[player2Id]) {
+                const p2 = nbaPlayers[player2Id];
+                datasets.push({
+                    label: p2.name,
+                    data: p2.timeline,
+                    borderColor: 'rgba(118, 75, 162, 1)',
+                    backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                });
+            }
+
+            volatilityChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 120,
+                            title: {
+                                display: true,
+                                text: 'Market Value Index'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create age vs performance chart
+        function createAgePerformanceChart() {
+            const ctx = document.getElementById('agePerformanceChart').getContext('2d');
+            
+            if (agePerformanceChart) {
+                agePerformanceChart.destroy();
+            }
+
+            const data = Object.values(nbaPlayers).map(player => ({
+                x: player.age,
+                y: player.stats.ppg,
+                label: player.name
+            }));
+
+            agePerformanceChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Points vs Age',
+                        data: data,
+                        backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Age'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Points Per Game'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const point = context.parsed;
+                                    const player = data[context.dataIndex];
+                                    return `${player.label}: Age ${point.x}, ${point.y} PPG`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update player card
+        function updatePlayerCard(playerId, cardNumber) {
+            const player = nbaPlayers[playerId];
+            if (!player) return;
+
+            const card = document.getElementById(`player${cardNumber}Card`);
+            const name = document.getElementById(`player${cardNumber}Name`);
+            const info = document.getElementById(`player${cardNumber}Info`);
+            const stats = document.getElementById(`player${cardNumber}Stats`);
+
+            name.textContent = player.name;
+            
+            info.innerHTML = `
+                <div>Age: ${player.age}</div>
+                <div>Team: ${player.team}</div>
+                <div>Position: ${player.position}</div>
+                <div>Games: ${player.stats.games_played}</div>
+            `;
+
+            stats.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-label">PPG</div>
+                    <div class="stat-value">${player.stats.ppg}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">RPG</div>
+                    <div class="stat-value">${player.stats.rpg}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">APG</div>
+                    <div class="stat-value">${player.stats.apg}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">FG%</div>
+                    <div class="stat-value">${(player.stats.fg_pct * 100).toFixed(1)}%</div>
+                </div>
+            `;
+
+            card.style.display = 'block';
+        }
+
+        // Update injury risk analysis
+        function updateInjuryAnalysis(playerId) {
+            if (!playerId || !nbaPlayers[playerId]) {
+                document.getElementById('gamesMissed').textContent = '-';
+                document.getElementById('injuryFreq').textContent = '-';
+                document.getElementById('recoveryTime').textContent = '-';
+                document.getElementById('riskLevel').textContent = '-';
+                return;
+            }
+
+            const injury = nbaPlayers[playerId].injuryHistory;
+            document.getElementById('gamesMissed').textContent = injury.gamesMissed;
+            document.getElementById('injuryFreq').textContent = injury.injuryFreq;
+            document.getElementById('recoveryTime').textContent = injury.recoveryTime;
+            
+            const riskElement = document.getElementById('riskLevel');
+            riskElement.innerHTML = `<span class="risk-indicator risk-${injury.riskLevel.toLowerCase()}">${injury.riskLevel}</span>`;
+        }
+
+        // Event listeners
+        document.getElementById('player1').addEventListener('change', function() {
+            const player1Id = this.value;
+            const player2Id = document.getElementById('player2').value;
+            
+            if (player1Id) {
+                updatePlayerCard(player1Id, 1);
+                updateInjuryAnalysis(player1Id);
+            }
+            
+            createPerformanceChart(player1Id, player2Id);
+            createVolatilityChart(player1Id, player2Id);
+        });
+
+        document.getElementById('player2').addEventListener('change', function() {
+            const player1Id = document.getElementById('player1').value;
+            const player2Id = this.value;
+            
+            if (player2Id) {
+                updatePlayerCard(player2Id, 2);
+            }
+            
+            createPerformanceChart(player1Id, player2Id);
+            createVolatilityChart(player1Id, player2Id);
+        });
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            populatePlayerDropdowns();
+            createAgePerformanceChart();
+        });
+    </script>
+</body>
+</html>
